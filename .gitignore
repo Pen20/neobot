@@ -1,1 +1,9 @@
 .DS_Store
+.env
+secrets.toml
+
+__pycache__/agent.*
+__pycache__/llm.*
+__pycache__/graph.*
+__pycache__/utils.*
+tools/__pycache__/vector.*
