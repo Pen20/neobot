@@ -1,40 +1,136 @@
-= Build an Neo4j-backed Chatbot using Python
+= ENHANCING MATHEMATICS EDUCATION IN AFRICA
+== LEVERAGING THE STACK DATASET AND A NEO4J-POWERED AI CHATBOT FOR ERROR ANALYSIS AND PEDAGOGICAL SUPPORT
 
-This repository accompanies the link:https://graphacademy.neo4j.com/courses/llm-chatbot-python[Build an Neo4j-backed Chatbot using Python^] course on link:https://graphacademy.neo4j.com/?ref=github[Neo4j GraphAcademy^].
+This repository contains the code and resources for the research paper:
 
-For a complete walkthrough of this repository, link:https://graphacademy.neo4j.com/courses/llm-chatbot-python/?ref=github[enrol now^].
+*Enhancing Mathematics Education in Africa: Leveraging the STACK Dataset and a Neo4j-Powered AI Chatbot for Error Analysis and Pedagogical Support.*
 
-link:https://codespaces.new/neo4j-graphacademy/llm-chatbot-python[image:https://github.com/codespaces/badge.svg[Open in GitHub Codespaces]^]
+NOTE: This research was made possible thanks to the knowledge and practical skills gained from the Neo4j GraphAcademy course: _Build a Neo4j-backed Chatbot using Python_.
 
-== Running the application
+== QUICK START
 
-To run the application, you must install the libraries listed in `requirements.txt`.
+=== 1. INSTALL DEPENDENCIES
 
-[source,sh]
+[source,bash]
+----
 pip install -r requirements.txt
+----
 
+=== 2. SET UP NEO4J DATABASE
 
-Then run the `streamlit run` command to start the app on link:http://localhost:8501/[http://localhost:8501/^].
+* Install Neo4j Desktop or use Neo4j Aura.
+* Install the APOC plugin.
 
-[source,sh]
+=== 3. IMPORT THE STACK DATASET USING PYTHON
+
+The recommended way to import data, including vector embeddings and error categories, is via the provided Python script.
+
+.Sample Python Import Script
+[source,python]
+----
+from neo4j import GraphDatabase
+import pandas as pd
+import ast
+import os
+
+# Load CSV
+df = pd.read_csv("/path/to/students_errors_with_embeddings.csv")
+
+# Convert embedding string to list
+df['student_error_embedding'] = df['student_error_embedding'].apply(ast.literal_eval)
+
+# Clean column types
+df['error_category'] = df['error_category'].astype(str)
+df['student_id'] = df['student_id'].astype(str)
+df['seed_id'] = df['seed_id'].astype(str)
+
+# Connect to Neo4j
+driver = GraphDatabase.driver(
+    uri=url,
+    auth=(username, password)
+)
+
+def create_graph(tx, row):
+    tx.run("""
+        MERGE (s:Student {student_id: $student_id})
+        MERGE (q:Question {question_id: $question})
+        MERGE (seed:Seed {seed_id: $seed_id})
+        MERGE (ec:ErrorCategory {name: $error_category})
+        CREATE (a:Answer {
+            response: $response,
+            grade: $grade,
+            right_answer: $right_answer,
+            llm_response: $llm_response,
+            student_error_embedding: $embedding
+        })
+        MERGE (s)-[:ANSWERED]->(a)
+        MERGE (a)-[:FOR_QUESTION]->(q)
+        MERGE (q)-[:USED_SEED]->(seed)
+        MERGE (a)-[:CATEGORIZED_AS]->(ec)
+    """, {
+        "student_id": row["student_id"],
+        "question": row["question"],
+        "seed_id": row["seed_id"],
+        "error_category": row["error_category"],
+        "response": row["response"],
+        "grade": float(row["grade"]),
+        "right_answer": row["right_answer"],
+        "llm_response": row["llm_response"],
+        "embedding": row["student_error_embedding"]
+    })
+
+with driver.session() as session:
+    for _, row in df.iterrows():
+        session.write_transaction(create_graph, row)
+
+print("Graph successfully created in AuraDB.")
+----
+
+=== 4. CREATE THE VECTOR INDEX USING PYTHON
+
+.Sample Python Vector Index Creation
+[source,python]
+----
+from neo4j import GraphDatabase
+
+driver = GraphDatabase.driver(
+    uri=url,
+    auth=(username, password)
+)
+
+create_vector_index_cypher = """
+CREATE VECTOR INDEX student_embedding_index
+FOR (s:Student)
+ON (s.student_error_embedding)
+OPTIONS {
+  indexConfig: {
+    `vector.dimensions`: 1536,
+    `vector.similarity_function`: "cosine"
+  }
+}
+"""
+
+with driver.session() as session:
+    session.run(create_vector_index_cypher)
+
+print("Vector index 'student_embedding_index' created successfully.")
+----
+
+*Change `vector.dimensions` if your embedding vector size is different.*
+
+=== 5. CONFIGURE YOUR SECRETS
+
+* Edit `.streamlit/secrets.toml` with your Neo4j connection details.
+
+=== 6. RUN THE CHATBOT
+
+[source,bash]
+----
 streamlit run bot.py
+----
 
-== Tests
+* Open your browser at http://localhost:8501
 
-To run the solution tests: 
+== ACKNOWLEDGEMENTS
 
-. Create Neo4j instance with the `recommendations` dataset
-. Run the link:https://raw.githubusercontent.com/neo4j-graphacademy/courses/refs/heads/main/asciidoc/courses/llm-chatbot-python/modules/3-tools/lessons/1-vector-tool/reset.cypher[Cypher to add embeddings and create the vector index^].
-. Create a virtual environment and install the requirements.
-+ 
-[source,sh]
-pip install -r requirements.txt
-. Install `pytest`
-+
-[source,sh]
-pip install pytest
-. Create a `secrets.toml` file in the `.streamlit` directory. Use `secrets.toml.example` as a template.
-. Run the tests
-+
-[source,sh]
-pytest
+*Neo4j GraphAcademy* — for the excellent course "Build a Neo4j-backed Chatbot using Python", which enabled this research and development.
