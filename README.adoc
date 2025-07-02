@@ -1,5 +1,7 @@
 = ENHANCING MATHEMATICS EDUCATION IN AFRICA
 == LEVERAGING THE STACK DATASET AND A NEO4J-POWERED AI CHATBOT FOR ERROR ANALYSIS AND PEDAGOGICAL SUPPORT
+image::https://github.com/Pen20/neobot/blob/main/screenshot.png[Chatbot Screenshot]
+
 
 This repository contains the code and resources for the research paper:
 
@@ -120,7 +122,7 @@ print("Vector index 'student_embedding_index' created successfully.")
 
 === 5. CONFIGURE YOUR SECRETS
 
-* Edit `.streamlit/secrets.toml` with your Neo4j connection details.
+* Create `.streamlit/secrets.toml` with your Neo4j connection details.
 
 === 6. RUN THE CHATBOT
 
