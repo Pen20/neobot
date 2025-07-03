@@ -29,7 +29,7 @@ RETURN
     score,
     {
         student_id: node.student_id,
-        grade: [ (node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | Answer.grade ],
+        grade: [ (node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [node.student_id, Answer.grade] ],
         student_response: [ (node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [node.student_id, Answer.response] ],
         original_answer: [ (node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [node.student_id, Answer.right_answer] ],
         question_id: [ (node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [node.student_id, Question.question_id] ]

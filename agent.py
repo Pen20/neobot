@@ -10,6 +10,8 @@ from langchain_core.runnables.history import RunnableWithMessageHistory
 from tools.vector import get_student_error_feedback
 from utils import get_session_id
 
+from tools.cypher import cypher_qa
+
 # Math tutor chat prompt
 chat_prompt = ChatPromptTemplate.from_messages(
     [
@@ -31,6 +33,11 @@ tools = [
         name="Student Error Feedback",
         description="Analyze and provide feedback on student errors using LLM explanations and data retrieved from the database.",
         func=get_student_error_feedback,
+    ),
+    Tool.from_function(
+        name="Mathematics information",
+        description="Provide information about mathematics questions using Cypher",
+        func = cypher_qa,
     )
 ]
 
