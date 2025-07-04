@@ -16,8 +16,7 @@ Do not use any other relationship types or properties that are not provided.
 
 Do not return entire nodes or embedding properties.
 
-Fine Tuning:
-
+Use the following format for your Cypher queries:
 Example Cypher Statements:
 
 1. What mistake did student 12 make on question 7?
