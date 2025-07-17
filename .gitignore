@@ -1,9 +1,23 @@
-.DS_Store
-.env
-secrets.toml
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
 
-__pycache__/agent.*
-__pycache__/llm.*
-__pycache__/graph.*
-__pycache__/utils.*
-tools/__pycache__/vector.*
+# macOS system files
+.DS_Store
+
+# Virtual environments
+myvenv/
+venv/
+.env/
+
+# VSCode or JetBrains project settings (optional, if using)
+.vscode/
+.idea/
+
+# Log files or data dumps (optional)
+*.log
+*.sqlite3
+*.db
+
+# Streamlit secrets
+.streamlit/secrets.toml

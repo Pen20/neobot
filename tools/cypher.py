@@ -31,6 +31,22 @@ MATCH (s:Student {student_id: "23"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q
 RETURN a.llm_response AS explanation
 
 ```
+
+3. Which similar error categories appeared in students’ answers to question 5?
+```
+MATCH (q:Question {question_id: "Q. 5"})-[:CATEGORIZED_AS]->(nec:ErrorCategory)
+RETURN nec.error_category
+```
+4. Which 10 top-performing students made transformation errors on question 1?
+```
+MATCH (s:Student)-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 1"})
+      -[:USED_SEED]->(sd:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
+WHERE ec.error_category CONTAINS "transformation"
+WITH s, a
+ORDER BY a.grade DESC
+RETURN DISTINCT s.student_id, a.grade
+LIMIT 10
+```
 Schema:
 {schema}
 
