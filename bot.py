@@ -10,7 +10,7 @@ st.title("EduStackBot - Intelligent Student Error Analysis")
 
 st.markdown("""
 EduStackBot is a chatbot-powered educational assistant designed to help analyze student performance and misconceptions.
-It leverages Neo4j graph queries, GPT-4o language intelligence, and the N Error Analysis (NEA) framework to:
+It leverages Neo4j graph queries, GPT-4o language intelligence, and the Newman Error Analysis (NEA) framework to:
 
 - Understand student responses and performance across assessments
 - Identify patterns in conceptual, procedural, or transformation errors
