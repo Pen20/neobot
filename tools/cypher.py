@@ -7,6 +7,9 @@ from langchain_neo4j import GraphCypherQAChain
 # Create the Cypher QA chain
 from langchain.prompts.prompt import PromptTemplate
 
+# 🔐 Get OpenAI token from Streamlit secrets
+openai_token = st.secrets["OPENAI_API_KEY"]
+
 CYPHER_GENERATION_TEMPLATE = """
 You are an expert Neo4j Developer translating user questions into Cypher to answer questions about mathematics and provide recommendations.
 Convert the user's question based on the schema.
@@ -21,21 +24,58 @@ Example Cypher Statements:
 
 1. What mistake did student 12 make on question 5?
 ```
-MATCH (s:Student {student_id: "12"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "5"})
-RETURN a.llm_response AS mistake, a.response AS student_answer, a.right_answer AS correct_answer
+MATCH (s:Student {student_id: "12"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 5"})-[:USED_SEED]->(sd:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
+RETURN
+    s.llm_response AS text,
+    {
+        student_id: s.student_id,
+        grade: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.grade] ],
+        student_response: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.response] ],
+        original_answer: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.right_answer] ],
+        question_id: q.question_id
+    } AS metadata
 
 ```
-2. Which misconceptions did student 23 have in their answer to question 4?
+2. Which misconceptions did student 23 have in their answer to question 1?
 ```
-MATCH (s:Student {student_id: "23"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "4"})
-RETURN a.llm_response AS explanation
-
+MATCH (s:Student {student_id: "23"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 1"})-[:USED_SEED]->(sd:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
+RETURN
+    s.llm_response AS mistakes, 
+    ec.error_category AS categories,
+    {
+        student_id: s.student_id,
+        grade: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.grade] ],
+        student_response: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.response] ],
+        original_answer: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.right_answer] ],
+        question_id: q.question_id
+    } AS metadata
 ```
 
 3. Which similar error categories appeared in students’ answers to question 5?
 ```
-MATCH (q:Question {question_id: "Q. 5"})-[:CATEGORIZED_AS]->(nec:ErrorCategory)
-RETURN nec.error_category
+WWITH genai.vector.encode(
+"Which similar error categories appeared in students’ answers to question 5?",
+"OpenAI",
+{{ token: "{openai_token}" }}
+) AS categoryEmbedding
+
+CALL db.index.vector.queryNodes('category_embedding_index', 50, categoryEmbedding)
+YIELD node AS similarCategory, score
+
+MATCH (s:Student)-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {{question_id: "Q. 5"}})
+-[:USED_SEED]->(:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
+WHERE ec = similarCategory
+
+RETURN
+ec.error_category AS category,
+score,
+s.student_id AS student_id,
+a.grade AS grade,
+a.response AS student_response,
+a.right_answer AS original_answer,
+q.question_id AS question_id
+ORDER BY score DESC
+LIMIT 10
 ```
 4. Which 10 top-performing students made transformation errors on question 1?
 ```
