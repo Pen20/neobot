@@ -19,9 +19,9 @@ Do not return entire nodes or embedding properties.
 Use the following format for your Cypher queries:
 Example Cypher Statements:
 
-1. What mistake did student 12 make on question 7?
+1. What mistake did student 12 make on question 5?
 ```
-MATCH (s:Student {student_id: "12"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "7"})
+MATCH (s:Student {student_id: "12"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "5"})
 RETURN a.llm_response AS mistake, a.response AS student_answer, a.right_answer AS correct_answer
 
 ```
@@ -39,13 +39,11 @@ RETURN nec.error_category
 ```
 4. Which 10 top-performing students made transformation errors on question 1?
 ```
-MATCH (s:Student)-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 1"})
-      -[:USED_SEED]->(sd:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
-WHERE ec.error_category CONTAINS "transformation"
-WITH s, a
+MATCH (s:Student)-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 1"})-[:CATEGORIZED_AS]->(nec:ErrorCategory)
+WHERE nec.error_category CONTAINS "transformation"
+  AND a.grade >= 0.6
+RETURN DISTINCT s.student_id, a.grade, nec.error_category
 ORDER BY a.grade DESC
-RETURN DISTINCT s.student_id, a.grade
-LIMIT 10
 ```
 Schema:
 {schema}
