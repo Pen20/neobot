@@ -7,13 +7,44 @@ from langchain.tools import Tool
 from langchain_neo4j import Neo4jChatMessageHistory
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from tools.vector import get_student_error_feedback
 
+from tools.vector import get_student_error_feedback
 from utils import get_session_id
 
 from tools.cypher import cypher_qa
 
-# Math tutor chat prompt
+
+# --------------------------
+# Custom tool wrapper
+# --------------------------
+
+def formatted_student_error_feedback(input):
+    result = get_student_error_feedback(input)
+    answer = result.get("answer", "")
+    docs = result.get("context", [])
+
+    response = f"Explanation:\n{answer}\n"
+
+    if docs:
+        doc = docs[0]
+        metadata = doc.metadata
+
+        student_id = metadata.get("student_id", "Unknown")
+        grade = metadata.get("grade", [["", ""]])[0][1] if metadata.get("grade") else "N/A"
+        question_id = metadata.get("question_id", [["", ""]])[0][1] if metadata.get("question_id") else "N/A"
+
+        response += f"\nStudent ID: {student_id}"
+        response += f"\nQuestion ID: {question_id}"
+        response += f"\nGrade: {grade}"
+    else:
+        response += "\nNo metadata found."
+
+    return response
+
+# --------------------------
+# Prompts and chains
+# --------------------------
+
 chat_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", "You are a tutor expert providing information about mathematics."),
@@ -23,7 +54,10 @@ chat_prompt = ChatPromptTemplate.from_messages(
 
 math_chat = chat_prompt | llm | StrOutputParser()
 
-# Tools list
+# --------------------------
+# Tools
+# --------------------------
+
 tools = [
     Tool.from_function(
         name="General Chat",
@@ -33,20 +67,22 @@ tools = [
     Tool.from_function(
         name="Student Error Feedback",
         description="Analyze and provide feedback on student errors using LLM explanations and data retrieved from the database.",
-        func=get_student_error_feedback,
+        func=formatted_student_error_feedback,
     ),
     Tool.from_function(
-        name="Mathematics information",
-        description="Provide information about mathematics questions using Cypher",
-        func = cypher_qa,
+        name="Math QA information",
+        description="Provide information on student about questions using Cypher",
+        func = cypher_qa
     )
 ]
 
-# Chat history callback
+# --------------------------
+# Memory & Agent Setup
+# --------------------------
+
 def get_memory(session_id):
     return Neo4jChatMessageHistory(session_id=session_id, graph=graph)
 
-# Agent prompt template
 agent_prompt = PromptTemplate.from_template("""
 You are a tutor expert providing information about mathematics.
 Be as helpful as possible and return as much information as possible.
@@ -62,7 +98,6 @@ You have access to the following tools:
 {tools}
 
 To use a tool, please use the following format:
-
 
 ```
 Thought: Do I need to use a tool? Yes
