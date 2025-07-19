@@ -21,3 +21,5 @@ venv/
 
 # Streamlit secrets
 .streamlit/secrets.toml
+
+tools/__pycache__/cypher.cpython-310.pyc

@@ -24,64 +24,26 @@ Example Cypher Statements:
 
 1. What mistake did student 12 make on question 5?
 ```
-MATCH (s:Student {student_id: "12"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 5"})-[:USED_SEED]->(sd:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
-RETURN
-    s.llm_response AS text,
-    {
-        student_id: s.student_id,
-        grade: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.grade] ],
-        student_response: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.response] ],
-        original_answer: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.right_answer] ],
-        question_id: q.question_id
-    } AS metadata
-
+MATCH (s:Student {student_id: "12"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 5"})
+RETURN s.llm_response AS text
 ```
 2. Which misconceptions did student 23 have in their answer to question 1?
 ```
 MATCH (s:Student {student_id: "23"})-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 1"})-[:USED_SEED]->(sd:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
-RETURN
-    s.llm_response AS mistakes, 
-    ec.error_category AS categories,
-    {
-        student_id: s.student_id,
-        grade: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.grade] ],
-        student_response: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.response] ],
-        original_answer: [ (s)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | [s.student_id, Answer.right_answer] ],
-        question_id: q.question_id
-    } AS metadata
+RETURN s.llm_response AS mistakes, ec.error_category AS categories
 ```
 
 3. Which similar error categories appeared in students’ answers to question 5?
 ```
-WWITH genai.vector.encode(
-"Which similar error categories appeared in students’ answers to question 5?",
-"OpenAI",
-{{ token: "{openai_token}" }}
-) AS categoryEmbedding
-
-CALL db.index.vector.queryNodes('category_embedding_index', 50, categoryEmbedding)
-YIELD node AS similarCategory, score
-
-MATCH (s:Student)-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {{question_id: "Q. 5"}})
--[:USED_SEED]->(:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
-WHERE ec = similarCategory
-
-RETURN
-ec.error_category AS category,
-score,
-s.student_id AS student_id,
-a.grade AS grade,
-a.response AS student_response,
-a.right_answer AS original_answer,
-q.question_id AS question_id
-ORDER BY score DESC
-LIMIT 10
+MATCH (s:Student)-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 5"})-[:USED_SEED]->(:Seed)-[:TAGGED_WITH]->(ec:ErrorCategory)
+RETURN ec.error_category AS category
 ```
 4. Which 10 top-performing students made transformation errors on question 1?
 ```
 MATCH (s:Student)-[:ANSWERED]->(a:Answer)-[:FOR_QUESTION]->(q:Question {question_id: "Q. 1"})-[:CATEGORIZED_AS]->(nec:ErrorCategory)
 WHERE nec.error_category CONTAINS "transformation"
   AND a.grade >= 0.6
+LIMIT 10
 RETURN DISTINCT s.student_id, a.grade, nec.error_category
 ORDER BY a.grade DESC
 ```
