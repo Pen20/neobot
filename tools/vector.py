@@ -11,21 +11,20 @@ from langchain_core.prompts import ChatPromptTemplate
 neo4jvector = Neo4jVector.from_existing_index(
     embeddings,
     graph=graph,
-    index_name="student_embeddding_index",
+    index_name="student_embedding_index",
     node_label="Student",
     text_node_property="llm_response",
     embedding_node_property="student_error_embedding",
     retrieval_query="""
-RETURN
-    node.llm_response AS text,
-    score,
-    {
-        student_id: node.student_id,
-        grade: [(node)-[:ANSWERED]->(a: Answer)-[:FOR_QUESTION]->(q: Question) | [node.student_id, a.grade]],
-        response: [(node)-[:ANSWERED]->(a: Answer)-[:FOR_QUESTION]->(q: Question) | [node.student_id, a.response]],
-        right_answer: [(node)-[:ANSWERED]->(a: Answer)-[:FOR_QUESTION]->(q: Question) | [node.student_id, a.right_answer]],
-        question_id: [(node)-[:ANSWERED]->(a: Answer)-[:FOR_QUESTION]->(q: Question) | [node.student_id, q.question_id]]
-    } AS metadata
+RETURN node.llm_response AS text, score,
+{
+  studentId: node.student_id,
+  grade: [(node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | Answer.grade],
+  studentResponse: [(node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | Answer.response],
+  rightSolution: [(node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | Answer.right_answer],
+  questionID: [(node)-[:ANSWERED]->(Answer)-[:FOR_QUESTION]->(Question) | Question.question_id]
+} AS metadata
+
 """
 )
 
@@ -35,10 +34,13 @@ retriever = neo4jvector.as_retriever()
 
 # Prompt for the vector QA chain
 instructions = (
-    "Use the given context and the information in medata to answer the question. "
-    "If you don't know the answer, say you don't know. "
+    "You are an educational assistant helping to analyze student responses. "
+    "The provided context relates to each student's performance and the errors they made while answering questions. "
+    "If there is no information about a student or a specific question, it means the student answered it correctly and was therefore excluded from the error data. "
     "Context: {context}"
 )
+
+
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", instructions),

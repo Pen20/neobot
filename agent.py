@@ -8,42 +8,12 @@ from langchain_neo4j import Neo4jChatMessageHistory
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain_core.runnables.history import RunnableWithMessageHistory
 
-from tools.vector import get_student_error_feedback
 from utils import get_session_id
 
-from tools.cypher import cypher_qa
+from tools.vector import get_student_error_feedback 
+from tools.category import get_student_nea_category_feedback
 
 
-# --------------------------
-# Custom tool wrapper
-# --------------------------
-
-def formatted_student_error_feedback(input):
-    result = get_student_error_feedback(input)
-    answer = result.get("answer", "")
-    docs = result.get("context", [])
-
-    response = f"Explanation:\n{answer}\n"
-
-    if docs:
-        doc = docs[0]
-        metadata = doc.metadata
-
-        student_id = metadata.get("student_id", "Unknown")
-        grade = metadata.get("grade", [["", ""]])[0][1] if metadata.get("grade") else "N/A"
-        question_id = metadata.get("question_id", [["", ""]])[0][1] if metadata.get("question_id") else "N/A"
-
-        response += f"\nStudent ID: {student_id}"
-        response += f"\nQuestion ID: {question_id}"
-        response += f"\nGrade: {grade}"
-    else:
-        response += "\nNo metadata found."
-
-    return response
-
-# --------------------------
-# Prompts and chains
-# --------------------------
 
 chat_prompt = ChatPromptTemplate.from_messages(
     [
@@ -65,15 +35,26 @@ tools = [
         func=math_chat.invoke,
     ),
     Tool.from_function(
-        name="Student Error Feedback",
-        description="Analyze and provide feedback on student errors using LLM explanations and data retrieved from the database.",
-        func=formatted_student_error_feedback,
+    name="get_student_error_feedback",
+    description=(
+        "Use this tool to retrieve detailed feedback and error analysis for a student based on their response. "
+        "It uses semantic similarity to find student responses and returns associated metadata such as grades, "
+        "actual answers, correct answers, and question IDs. Ideal when analyzing how a student performed or why "
+        "they made certain mistakes."
+    ),
+    func=get_student_error_feedback,
     ),
     Tool.from_function(
-        name="Math QA information",
-        description="Provide information on student about questions using Cypher",
-        func = cypher_qa
-    )
+    name="get_student_nea_category_feedback",
+    description=(
+        "Use this tool to analyze and retrieve information about the types of errors students made, "
+        "based on Newman's Error Analysis (NEA). "
+        "It uses semantic similarity to find student responses linked to error categories like reading, comprehension, "
+        "transformation, process, and encoding. "
+        "Returns metadata such as student ID, question ID, student response, correct solution, and grade."
+    ),
+    func=get_student_nea_category_feedback,
+)
 ]
 
 # --------------------------

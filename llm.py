@@ -7,12 +7,10 @@ llm = ChatOpenAI(
     model=st.secrets["OPENAI_MODEL"],
 )
 
-
-
-# Create the Embedding model
 # Create the Embedding model
 from langchain_openai import OpenAIEmbeddings
 
 embeddings = OpenAIEmbeddings(
     openai_api_key=st.secrets["OPENAI_API_KEY"]
 )
+
